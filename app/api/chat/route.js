@@ -26,9 +26,10 @@ export async function POST(req) {
       messages: [
         {
           role: 'user',
-          content: `About the topic ${topic.trim()}, answer this question: ${question.trim()}\n\nUse exactly 3 bullet points.`,
+          content: `Topic: ${topic.trim()}\nQuestion: ${question.trim()}\nAnswer in exactly 3 short bullet points.`,
         },
       ],
+      max_tokens: 200,
     });
     return Response.json(completion.choices[0].message);
   } catch (error) {
