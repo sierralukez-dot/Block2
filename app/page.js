@@ -33,7 +33,7 @@ export default function Home() {
 
   return (
     <main style={{ maxWidth: 600, margin: '4rem auto', padding: '0 1rem', fontFamily: 'sans-serif' }}>
-      <h1>Course Companion</h1>
+      <h1>COURSE COMPANION</h1>
       <p>Ask the AI anything to get started.</p>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
