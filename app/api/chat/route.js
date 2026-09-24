@@ -11,10 +11,15 @@ const client = new OpenAI({
 });
 
 export async function POST(req) {
-  const { messages } = await req.json();
+  const { topic } = await req.json();
   const completion = await client.chat.completions.create({
     model: process.env.OLLAMA_MODEL,
-    messages,
+    messages: [
+      {
+        role: 'user',
+        content: `Explain ${topic} in exactly 3 bullet points.`,
+      },
+    ],
   });
   return Response.json(completion.choices[0].message);
 }
