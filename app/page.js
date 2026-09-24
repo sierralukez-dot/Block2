@@ -4,12 +4,13 @@ import { useState } from 'react';
 
 export default function Home() {
   const [topic, setTopic] = useState('');
+  const [question, setQuestion] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!topic.trim()) return;
+    if (!topic.trim() || !question.trim()) return;
 
     setLoading(true);
     setResponse('');
@@ -18,7 +19,7 @@ export default function Home() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic }),
+        body: JSON.stringify({ topic, question }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -35,9 +36,9 @@ export default function Home() {
   return (
     <main style={{ maxWidth: 600, margin: '4rem auto', padding: '0 1rem', fontFamily: 'sans-serif' }}>
       <h1>COURSE COMPANION</h1>
-      <p>Choose a topic to get started.</p>
+      <p>Choose a topic and ask a question to get started.</p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1.5rem' }}>
         <label htmlFor="topic">Topic</label>
         <input
           id="topic"
@@ -45,6 +46,16 @@ export default function Home() {
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           placeholder="Enter a topic..."
+          required
+          style={{ flex: 1, padding: '0.5rem', fontSize: '1rem' }}
+        />
+        <label htmlFor="question">Question</label>
+        <input
+          id="question"
+          type="text"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Ask a question..."
           required
           style={{ flex: 1, padding: '0.5rem', fontSize: '1rem' }}
         />

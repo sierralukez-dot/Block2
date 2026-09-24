@@ -11,19 +11,26 @@ const client = new OpenAI({
 });
 
 export async function POST(req) {
-  const { topic } = await req.json();
-  if (!topic?.trim()) {
-    return Response.json({ error: 'Please enter a topic.' }, { status: 400 });
+  const { topic, question } = await req.json();
+  if (!topic?.trim() || !question?.trim()) {
+    return Response.json({ error: 'Please enter both a topic and a question.' }, { status: 400 });
   }
 
-  const completion = await client.chat.completions.create({
-    model: process.env.OLLAMA_MODEL,
-    messages: [
-      {
-        role: 'user',
-        content: `Explain ${topic.trim()} in exactly 3 bullet points.`,
-      },
-    ],
-  });
-  return Response.json(completion.choices[0].message);
+  try {
+    const completion = await client.chat.completions.create({
+      model: process.env.OLLAMA_MODEL,
+      messages: [
+        {
+          role: 'user',
+          content: `About the topic ${topic.trim()}, answer this question: ${question.trim()}\n\nUse exactly 3 bullet points.`,
+        },
+      ],
+    });
+    return Response.json(completion.choices[0].message);
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : 'The AI request failed.' },
+      { status: 502 },
+    );
+  }
 }
