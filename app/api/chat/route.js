@@ -5,10 +5,8 @@
 // concurrent student traffic. Hobby allows up to 60s with this export.
 export const maxDuration = 60;
 
-const client = new OpenAI({
-  baseURL: process.env.OLLAMA_BASE_URL,
-  apiKey: process.env.VCS_API_SECRET,
-});
+const baseURL = process.env.OPENAI_BASE_URL || process.env.OLLAMA_BASE_URL;
+const apiKey = process.env.OPENAI_API_KEY || process.env.VCS_API_SECRET;
 
 export async function POST(req) {
   const { topic, question } = await req.json();
@@ -17,6 +15,12 @@ export async function POST(req) {
   }
 
   try {
+    if (!baseURL || !apiKey) {
+      throw new Error('The AI environment variables are missing in Vercel.');
+    }
+    new URL(baseURL);
+
+    const client = new OpenAI({ baseURL, apiKey });
     const completion = await client.chat.completions.create({
       model: process.env.OLLAMA_MODEL,
       messages: [
