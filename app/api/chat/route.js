@@ -12,12 +12,16 @@ const client = new OpenAI({
 
 export async function POST(req) {
   const { topic } = await req.json();
+  if (!topic?.trim()) {
+    return Response.json({ error: 'Please enter a topic.' }, { status: 400 });
+  }
+
   const completion = await client.chat.completions.create({
     model: process.env.OLLAMA_MODEL,
     messages: [
       {
         role: 'user',
-        content: `Explain ${topic} in exactly 3 bullet points.`,
+        content: `Explain ${topic.trim()} in exactly 3 bullet points.`,
       },
     ],
   });

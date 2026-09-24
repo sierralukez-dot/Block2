@@ -21,6 +21,9 @@ export default function Home() {
         body: JSON.stringify({ topic }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'The chat request failed.');
+      }
       setResponse(data.content || 'No response received.');
     } catch (err) {
       setResponse('Error: ' + err.message);
@@ -46,7 +49,7 @@ export default function Home() {
           style={{ flex: 1, padding: '0.5rem', fontSize: '1rem' }}
         />
         <button type="submit" disabled={loading} style={{ padding: '0.5rem 1rem', fontSize: '1rem' }}>
-          {loading ? 'Thinking...' : 'Ask'}
+          {loading ? 'Thinking...' : 'Ask a question'}
         </button>
       </form>
 
