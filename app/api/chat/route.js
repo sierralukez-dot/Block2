@@ -7,6 +7,7 @@ export const maxDuration = 60;
 
 const baseURL = process.env.OPENAI_BASE_URL || process.env.OLLAMA_BASE_URL;
 const apiKey = process.env.OPENAI_API_KEY || process.env.VCS_API_SECRET;
+const model = process.env.CHAT_MODEL || 'qwen3:4b';
 
 export async function POST(req) {
   const { topic, question } = await req.json();
@@ -22,16 +23,24 @@ export async function POST(req) {
 
     const client = new OpenAI({ baseURL, apiKey });
     const completion = await client.chat.completions.create({
-      model: process.env.OLLAMA_MODEL,
+      model,
       messages: [
         {
+          role: 'system',
+          content: 'Answer directly. Return exactly three concise bullet points and no analysis or preamble.',
+        },
+        {
           role: 'user',
-          content: `Topic: ${topic.trim()}\nQuestion: ${question.trim()}\nAnswer in exactly 3 short bullet points.`,
+          content: `Topic: ${topic.trim()}\nQuestion: ${question.trim()}`,
         },
       ],
-      max_tokens: 200,
+      think: false,
+      reasoning_effort: 'none',
+      max_tokens: 512,
     });
-    return Response.json(completion.choices[0].message);
+    const message = completion.choices[0].message;
+    const answer = (message.content || '').split('</think>').pop().trim();
+    return Response.json({ role: message.role, content: answer || 'The AI returned an empty answer.' });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : 'The AI request failed.' },
