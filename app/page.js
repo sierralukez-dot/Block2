@@ -1,27 +1,115 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+const questionPrompts = [
+  'How can I help you today?',
+  'What would you like to explore?',
+  'What’s on your mind?',
+  'Ask me anything...',
+  'What can I help you figure out?',
+  'Where would you like to start?',
+  'What would you like to know?',
+];
+
+const headlinePhrases = [
+  'Curiosity looks good on you.',
+  'Big question energy.',
+  'Your brain called. It has a question.',
+  'Plot twist: let\'s figure it out.',
+  'Let\'s see where this goes.',
+  'Ready when your curiosity is.',
+];
+
+const initialHistorySections = [
+  { label: 'Recent', items: ['Water Cycle', 'Cell Structure', 'World War II'] },
+  { label: 'Science', items: ['Biology Notes', 'Earth Systems'] },
+  { label: 'History', items: ['American Revolution'] },
+];
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [question, setQuestion] = useState('');
+  const [questionPlaceholder, setQuestionPlaceholder] = useState(questionPrompts[0]);
+  const [headline, setHeadline] = useState(headlinePhrases[0]);
   const [response, setResponse] = useState(null);
   const [error, setError] = useState('');
   const [isPressed, setIsPressed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [historySections, setHistorySections] = useState(initialHistorySections);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  useEffect(() => {
+    try {
+      const savedHistory = window.localStorage.getItem('workhouse-history');
+      if (savedHistory) {
+        const parsedHistory = JSON.parse(savedHistory);
+        const isValidHistory = Array.isArray(parsedHistory) && parsedHistory.every(
+          (section) => typeof section.label === 'string'
+            && Array.isArray(section.items)
+            && section.items.every((item) => typeof item === 'string'),
+        );
+        if (isValidHistory) {
+          setHistorySections(parsedHistory);
+        }
+      }
+    } catch {}
+    setHistoryLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (historyLoaded) {
+      try {
+        window.localStorage.setItem('workhouse-history', JSON.stringify(historySections));
+      } catch {}
+    }
+  }, [historySections, historyLoaded]);
+
+  useEffect(() => {
+    const randomIndex = Math.floor(Math.random() * questionPrompts.length);
+    setQuestionPlaceholder(questionPrompts[randomIndex]);
+  }, []);
+
+  useEffect(() => {
+    let index = Math.floor(Math.random() * headlinePhrases.length);
+    setHeadline(headlinePhrases[index]);
+
+    const intervalId = window.setInterval(() => {
+      index = (index + 1) % headlinePhrases.length;
+      setHeadline(headlinePhrases[index]);
+    }, 6500);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const statusMessages = [
-    'Reading your document…',
-    'Finding the relevant sections…',
-    'Checking the source text…',
+    'Searching the web for reliable sources…',
+    'Comparing information across sources…',
+    'Checking which sources support an answer…',
     'Formulating the answer…',
-    'Trimming the evidence…',
     'Double-checking the response…',
     'Almost there…',
     'Polishing the summary…',
     'Weaving the answer together…',
   ];
+
+  function deleteHistoryCategory(label) {
+    if (window.confirm(`Delete the "${label}" category and all its conversations?`)) {
+      setHistorySections((sections) => sections.filter((section) => section.label !== label));
+    }
+  }
+
+  function deleteHistoryConversation(sectionLabel, conversation) {
+    if (window.confirm(`Delete "${conversation}" from your history?`)) {
+      setHistorySections((sections) => sections
+        .map((section) => section.label === sectionLabel
+          ? { ...section, items: section.items.filter((item) => item !== conversation) }
+          : section)
+        .filter((section) => section.items.length > 0));
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -122,7 +210,7 @@ export default function Home() {
             }}
           >
             <div style={{ fontWeight: 800, color: '#0f172a', letterSpacing: '0.04em', fontSize: '0.8rem', textTransform: 'uppercase' }}>
-              Workspace
+              Workhouse
             </div>
             <button
               type="button"
@@ -147,13 +235,10 @@ export default function Home() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {[
-              { label: 'Recent', items: ['Water Cycle', 'Cell Structure', 'World War II'] },
-              { label: 'Science', items: ['Biology Notes', 'Earth Systems'] },
-              { label: 'History', items: ['American Revolution'] },
-            ].map((section) => (
+            {historySections.length ? historySections.map((section) => (
               <div key={section.label}>
                 <div
+                  className="history-category-row"
                   style={{
                     margin: '0.5rem 0.6rem 0.3rem',
                     fontSize: '0.7rem',
@@ -161,33 +246,77 @@ export default function Home() {
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
                     color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                   }}
+                  onDoubleClick={() => setDeleteTarget({ type: 'category', label: section.label })}
                 >
                   {section.label}
+                  {deleteTarget?.type === 'category' && deleteTarget.label === section.label ? (
+                    <button
+                      type="button"
+                      className="history-delete-action"
+                      title={`Delete ${section.label} category`}
+                      aria-label={`Delete ${section.label} category`}
+                      onClick={() => {
+                        deleteHistoryCategory(section.label);
+                        setDeleteTarget(null);
+                      }}
+                      style={{ width: '1.8rem', height: '1.8rem', border: '1px solid #fecdd3', borderRadius: '8px', background: '#fff1f2', color: '#9f1239', cursor: 'pointer', fontSize: '0.9rem', placeItems: 'center' }}
+                    >
+                      <span aria-hidden="true">🗑</span>
+                    </button>
+                  ) : null}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                   {section.items.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      style={{
-                        border: 'none',
-                        background: item === 'Water Cycle' ? '#e7f7f4' : '#f8fafc',
-                        color: '#1f2937',
-                        borderRadius: '10px',
-                        padding: '0.7rem 0.7rem',
-                        textAlign: 'left',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        boxShadow: item === 'Water Cycle' ? 'inset 0 0 0 1px #bfe8df' : 'none',
-                      }}
-                    >
-                      {item}
-                    </button>
+                    <div key={item} className="history-conversation-row" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <button
+                        type="button"
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          border: 'none',
+                          background: item === 'Water Cycle' ? '#e7f7f4' : '#f8fafc',
+                          color: '#1f2937',
+                          borderRadius: '10px',
+                          padding: '0.7rem 0.7rem',
+                          textAlign: 'left',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          boxShadow: item === 'Water Cycle' ? 'inset 0 0 0 1px #bfe8df' : 'none',
+                        }}
+                        onDoubleClick={() => setDeleteTarget({ type: 'conversation', label: section.label, item })}
+                      >
+                        {item}
+                      </button>
+                      {deleteTarget?.type === 'conversation'
+                        && deleteTarget.label === section.label
+                        && deleteTarget.item === item ? (
+                          <button
+                            type="button"
+                            className="history-delete-action"
+                            title={`Delete ${item}`}
+                            aria-label={`Delete ${item}`}
+                            onClick={() => {
+                              deleteHistoryConversation(section.label, item);
+                              setDeleteTarget(null);
+                            }}
+                            style={{ width: '1.8rem', height: '1.8rem', border: '1px solid #fecdd3', borderRadius: '8px', background: '#fff1f2', color: '#9f1239', cursor: 'pointer', fontSize: '0.9rem', placeItems: 'center' }}
+                          >
+                            <span aria-hidden="true">🗑</span>
+                          </button>
+                        ) : null}
+                    </div>
                   ))}
                 </div>
               </div>
-            ))}
+            )) : (
+              <div style={{ padding: '0.7rem', color: '#64748b', fontSize: '0.85rem' }}>
+                No saved conversations
+              </div>
+            )}
           </div>
         </aside>
 
@@ -242,7 +371,9 @@ export default function Home() {
                 gap: '1rem',
               }}
             >
-              <div style={{ fontWeight: 800, fontSize: '1.3rem', color: '#0f172a' }}>Ask about this document</div>
+              <div style={{ fontWeight: 800, fontSize: '1.3rem', color: '#0f172a' }}>
+                <span key={headline} className="headline-transition">{headline}</span>
+              </div>
               <button
                 type="button"
                 style={{
@@ -321,15 +452,13 @@ export default function Home() {
                   border: '1px solid #e5e7eb',
                 }}
               >
-                <label htmlFor="question" style={{ display: 'block', margin: '0 0 0.5rem', fontSize: '0.72rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                  Ask a question
-                </label>
                 <input
                   id="question"
                   type="text"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ask a question about the document..."
+                  placeholder={questionPlaceholder}
+                  aria-label="Message"
                   required
                   style={{
                     width: '100%',
@@ -437,6 +566,22 @@ export default function Home() {
                     Answer
                   </div>
                   <div style={{ fontSize: '1rem', lineHeight: 1.8, color: '#0f172a', whiteSpace: 'pre-wrap' }}>{response.answer}</div>
+                  {response.sources?.length ? (
+                    <div style={{ marginTop: '1.1rem', paddingTop: '0.9rem', borderTop: '1px solid #e5e7eb' }}>
+                      <div style={{ marginBottom: '0.5rem', fontSize: '0.72rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                        Web sources
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'grid', gap: '0.35rem' }}>
+                        {response.sources.map((source) => (
+                          <li key={source.id}>
+                            <a href={source.url} target="_blank" rel="noreferrer" style={{ color: '#0f766e', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
+                              [{source.id}] {source.title}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -444,9 +589,29 @@ export default function Home() {
         </div>
       </div>
       <style jsx>{`
+        .history-delete-action {
+          display: none;
+        }
+        .history-category-row:hover .history-delete-action,
+        .history-category-row:focus-within .history-delete-action,
+        .history-conversation-row:hover .history-delete-action,
+        .history-conversation-row:focus-within .history-delete-action {
+          display: grid;
+        }
+        .headline-transition {
+          display: inline-block;
+          animation: headline-enter 450ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+        }
+        @keyframes headline-enter {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         @keyframes pulse {
           0%, 100% { opacity: 0.45; transform: scale(0.9); }
           50% { opacity: 1; transform: scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .headline-transition { animation: none; }
         }
       `}</style>
     </main>
