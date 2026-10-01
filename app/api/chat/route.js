@@ -1,8 +1,5 @@
 ﻿import OpenAI from 'openai';
 
-// Vercel Hobby tier defaults to a 10s function timeout — too short for a
-// classroom-loaded local model, which can occasionally run past that under
-// concurrent student traffic. Hobby allows up to 60s with this export.
 export const maxDuration = 60;
 
 const baseURL = process.env.OPENAI_BASE_URL || process.env.OLLAMA_BASE_URL;
@@ -10,37 +7,54 @@ const apiKey = process.env.OPENAI_API_KEY || process.env.VCS_API_SECRET;
 const model = process.env.CHAT_MODEL || 'qwen3:4b';
 
 export async function POST(req) {
-  const { topic, question } = await req.json();
-  if (!topic?.trim() || !question?.trim()) {
-    return Response.json({ error: 'Please enter both a topic and a question.' }, { status: 400 });
-  }
-
   try {
+    const formData = await req.formData();
+    const file = formData.get('file');
+    const question = formData.get('question')?.toString()?.trim();
+
+    if (!question) {
+      return Response.json({ error: 'Please provide a question.' }, { status: 400 });
+    }
+
+    const hasFile = file instanceof File;
+    const documentText = hasFile ? await file.text() : '';
+
     if (!baseURL || !apiKey) {
       throw new Error('The AI environment variables are missing in Vercel.');
     }
+
     new URL(baseURL);
 
     const client = new OpenAI({ baseURL, apiKey });
+    const systemPrompt = hasFile
+      ? 'You are a strict document-grounded assistant. Answer only using the provided document. If the answer is not in the document, say exactly: "The document does not provide enough information to answer this question." Do not use outside knowledge and do not speculate.'
+      : 'Answer the user question as accurately as possible. If the user has not provided a document, respond using the question itself and general knowledge. Be clear when the answer depends on context or assumptions.';
+
     const completion = await client.chat.completions.create({
       model,
       messages: [
         {
           role: 'system',
-          content: 'Answer directly. Return exactly three concise bullet points and no analysis or preamble.',
+          content: systemPrompt,
         },
         {
           role: 'user',
-          content: `Topic: ${topic.trim()}\nQuestion: ${question.trim()}`,
+          content: hasFile
+            ? `Document:\n${documentText}\n\nQuestion: ${question}`
+            : question,
         },
       ],
       think: false,
       reasoning_effort: 'none',
       max_tokens: 512,
     });
-    const message = completion.choices[0].message;
-    const answer = (message.content || '').split('</think>').pop().trim();
-    return Response.json({ role: message.role, content: answer || 'The AI returned an empty answer.' });
+
+    const answer = (completion.choices[0].message.content || '').split('</think>').pop().trim();
+
+    return Response.json({
+      question,
+      answer: answer || 'The document does not provide enough information to answer this question.',
+    });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : 'The AI request failed.' },
