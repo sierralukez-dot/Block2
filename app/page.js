@@ -36,7 +36,7 @@ export default function Home() {
   return (
     <main style={{ maxWidth: 600, margin: '4rem auto', padding: '0 1rem', fontFamily: 'sans-serif' }}>
       <h1>COURSE COMPANION</h1>
-      <p>Choose a topic and ask a question to get started.</p>
+      <p>CHOOSE A TOPIC AND ASK A QUESTION TO GET STARTED!</p>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1.5rem' }}>
         <label htmlFor="topic">Topic</label>
@@ -65,7 +65,7 @@ export default function Home() {
       </form>
 
       {response && (
-        <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f5f5f5', borderRadius: '8px' }}>
+        <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#dce9e6', color: '#333333', borderRadius: '8px' }}>
           {response}
         </div>
       )}
